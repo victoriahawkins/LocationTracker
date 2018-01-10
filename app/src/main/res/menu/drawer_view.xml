@@ -4,30 +4,29 @@
         <item
             android:id="@+id/nav_first_fragment"
             android:icon="@drawable/ic_one"
-            android:title="Trips"
+            android:title="@string/record_new_trip"
             android:checked="true"/>
         <item
             android:id="@+id/nav_second_fragment"
             android:icon="@drawable/ic_two"
-            android:title="Record New Trip" />
+            android:title="@string/saved_trips" />
         <item
             android:id="@+id/nav_third_fragment"
             android:icon="@drawable/ic_three"
-            android:title="Points of Interest" />
+            android:title="@string/points_of_interest" />
 
 
-
-        <item android:title="Sub items">
+        <item android:title="@string/sub_items">
             <menu>
                 <group android:checkableBehavior="single">
                     <item
                         android:id="@+id/settings_fragment"
                         android:icon="@drawable/ic_one"
-                        android:title="Settings" />
+                        android:title="@string/settings" />
                     <item
                         android:id="@+id/help_fragment"
                         android:icon="@drawable/ic_two"
-                        android:title="Help" />
+                        android:title="@string/help" />
                 </group>
             </menu>
         </item>

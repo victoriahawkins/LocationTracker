@@ -136,31 +136,32 @@ public class MainActivity extends AppCompatActivity implements MapFragmentRecord
                 });
     }
 
-    public void selectDrawerItem(MenuItem menuItem) {
+    private void selectDrawerItem(MenuItem menuItem) {
         // Create a new fragment and specify the fragment to show based on nav item clicked
         Fragment fragment = null;
         Class fragmentClass;
         switch(menuItem.getItemId()) {
             case R.id.nav_first_fragment:
-                fragmentClass = TripItemFragment.class;
-                break;
-            case R.id.nav_second_fragment:
 
                 fragmentClass = MapFragmentRecorder.class;
 
                 // we only want to instantiate mapfragment once otherwise we will have a leak
                 if (mMapFragmentRecorder == null)
-                mMapFragmentRecorder = new MapFragmentRecorder();
+                    mMapFragmentRecorder = new MapFragmentRecorder();
 
                 fragment = mMapFragmentRecorder;
 
                 break;
 
+            case R.id.nav_second_fragment:
+
+                fragmentClass = TripItemFragment.class;
+                break;
 
             case R.id.nav_third_fragment:
                 fragmentClass = MapFragmentPointsOfInterest.class;
 
-                Toast.makeText(this, "Implement google Points of Interest for last location visited", Toast.LENGTH_LONG).show();
+//                Toast.makeText(this, "Implement google Points of Interest for last location visited", Toast.LENGTH_LONG).show();
 
                 break;
 
@@ -240,15 +241,27 @@ public class MainActivity extends AppCompatActivity implements MapFragmentRecord
         super.onActivityResult(requestCode, resultCode, data);
 
         if (resultCode == RESULT_OK)
-            displayDefaultFragment();
+            displaySavedTripsFragment();
 
 
     }
 
-    /* this will create a new version of the default fragment which will also refresh the list of trips from the database */
-    private void displayDefaultFragment() {
+    /* this will create a new version of the saved trips fragment which will also refresh the list of trips from the database */
+    private void displaySavedTripsFragment() {
         FragmentManager fragmentManager = getSupportFragmentManager();
         fragmentManager.beginTransaction().replace(R.id.flContent, new TripItemFragment()).commit();
+    }
+
+    private void displayDefaultFragment() {
+
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        // we only want to instantiate mapfragment once otherwise we will have a leak
+        if (mMapFragmentRecorder == null)
+            mMapFragmentRecorder = new MapFragmentRecorder();
+
+        fragmentManager.beginTransaction().replace(R.id.flContent, mMapFragmentRecorder).commit();
+
+
     }
 
 

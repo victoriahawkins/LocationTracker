@@ -116,9 +116,7 @@ public class TripItemFragment extends Fragment {
         LocationTrackerDbHelper dbh = new LocationTrackerDbHelper(getContext());
 
 
-        List<Trip> trips = dbh.getAllTrips();
-
-        return trips;
+        return dbh.getAllTrips();
     }
 
 

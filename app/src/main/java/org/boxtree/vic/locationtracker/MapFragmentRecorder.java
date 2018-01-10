@@ -15,17 +15,22 @@ import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.util.ArrayList;
+import java.util.List;
 
 
 /*
@@ -34,7 +39,7 @@ Displays a map, requests permission for location updates, and records locations 
 for debugging, GPS traces can be downloaded here: http://www.openstreetmap.org/traces
 
  */
-public class MapFragmentRecorder extends MapFragment  {
+public class MapFragmentRecorder extends MapFragment {
 
     private LocationManager mLocationManager;
     private LocationListener mLocationListener;
@@ -44,9 +49,50 @@ public class MapFragmentRecorder extends MapFragment  {
 
     private MapFragInteraction mCallback;
 
+
+    List<Polyline> polylines = new ArrayList<>();
+
+    Boolean recording = false;
+
+    @Nullable
+    @Override
+    public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+
+        final View mapView = inflater.inflate(R.layout.activity_maps_recorder, container, false);
+
+        final Button button = (Button) mapView.findViewById(R.id.recordingButton);
+        button.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+
+                if (button.getText().equals(getString(R.string.start))) {
+
+                    startRecording(mapView);
+                    button.setText(R.string.stop);
+
+                } else {
+                    stopRecording(button);
+                }
+
+            }
+        });
+
+        return mapView;
+    }
+
+
+    // set the fragment
     @Override
     public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
+
+        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+        SupportMapFragment mapFragment = (SupportMapFragment) getChildFragmentManager().findFragmentById(R.id.map_recorder);
+        mapFragment.getMapAsync(this);
+
+
+    }
+
+    private void startRecording(View view) {
+        //        super.onViewCreated(view, savedInstanceState);
 
         // Check permission to receive location updates was granted to this app by user previously
         if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -59,14 +105,15 @@ public class MapFragmentRecorder extends MapFragment  {
             return;
         }
 
+
         // start receiving updates
         initializeLocationUpdates();
 
+        setRecording(true);
+
+
 //        Snackbar.make(findViewById(R.id.flContent), "Tracking new location updates...", Snackbar.LENGTH_LONG).setAction("Action", null).show();
         Snackbar.make(view, "Tracking new location updates...", Snackbar.LENGTH_LONG).setAction("Action", null).show();
-
-
-
     }
 
     // receive updates for GPS location
@@ -124,7 +171,6 @@ public class MapFragmentRecorder extends MapFragment  {
                     Log.d("MapFragmentRecorder", "no fine access location permission, requesting now and terminating app");
 
                 }
-                return;
             }
 
             // other 'case' lines to check for other
@@ -140,13 +186,28 @@ public class MapFragmentRecorder extends MapFragment  {
 
             LatLng newPosition = new LatLng(location.getLatitude(), location.getLongitude());
 
-            if (mLastPosition == null) mLastPosition = newPosition;
+            // first time, record position and return
+            if (getRoute().isEmpty()) {
+                setLastPosition(newPosition);
+                getRoute().add(location);
+                return;
+            }
 
 
-            Polyline line = mMap.addPolyline(new PolylineOptions()
-                    .add(mLastPosition, newPosition)
-                    .width(5)
-                    .color(Color.RED));
+            // if recording, add line to map and save location
+            if (isRecording()) {
+
+                Polyline line = mMap.addPolyline(new PolylineOptions()
+                        .add(getLastPosition(), newPosition)
+                        .width(5)
+                        .color(Color.RED));
+
+                polylines.add(line);
+
+                // save the location for the route
+                getRoute().add(location);
+
+            }
 
 
             // i like this one for collecting the trip realtime
@@ -154,8 +215,6 @@ public class MapFragmentRecorder extends MapFragment  {
 
 
 //            mMap.addMarker(new MarkerOptions().position(newPosition).title("Lat/Long: " + newPosition.latitude + "/" + newPosition.longitude));
-
-
 
 
             // I like this one for replay
@@ -168,13 +227,10 @@ public class MapFragmentRecorder extends MapFragment  {
 
             mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
 
-            mLastPosition = newPosition;
-
-            // save the location for the route
-            getRoute().add(location);
+            setLastPosition(newPosition);
 
 
-            Log.d("MapFragmentRecorder", ".makeUseOfNewLocation route saved so far are "+ getRoute().size());
+            Log.d("MapFragmentRecorder", ".makeUseOfNewLocation route saved so far are " + getRoute().size());
 
 
         }
@@ -189,9 +245,8 @@ public class MapFragmentRecorder extends MapFragment  {
 
 //        super.onMapReady(googleMap);
 
-        if (mLastPosition != null)
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(mLastPosition));
-
+        if (getLastPosition() != null)
+            mMap.moveCamera(CameraUpdateFactory.newLatLng(getLastPosition()));
 
 
         // if route active, redraw
@@ -202,10 +257,9 @@ public class MapFragmentRecorder extends MapFragment  {
         LatLng lastPosition = null;
         for (Location loc : getRoute()) {
 
-            Log.d("MapFragmentRecorder", "onMapReady drawing previous location adding polyline");
             LatLng nextPosition = new LatLng(loc.getLatitude(), loc.getLongitude());
 
-            if (lastPosition== null) lastPosition = nextPosition;
+            if (lastPosition == null) lastPosition = nextPosition;
             Polyline line = mMap.addPolyline(new PolylineOptions()
                     .add(lastPosition, nextPosition)
                     .width(5)
@@ -232,11 +286,7 @@ public class MapFragmentRecorder extends MapFragment  {
 //    public void onPause() {
 //        super.onPause();
 
-    @Override
-    public void onPause() {
-        super.onPause();
-
-    // confirm save trip
+    private void stopRecording(final Button button) {
 
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
 
@@ -244,14 +294,14 @@ public class MapFragmentRecorder extends MapFragment  {
                 // Add the buttons
                 .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
-                        // User clicked OK button
+
+                        setRecording(false);
 
                         stopLocationUpdates();
 
                         mCallback.saveTrip(getRoute());
 
-                        setRoute(new ArrayList<Location>()); // reset route
-
+                        clearRoute();
 
                     }
                 })
@@ -259,18 +309,17 @@ public class MapFragmentRecorder extends MapFragment  {
                     public void onClick(DialogInterface dialog, int id) {
                         // User clicked keep recording button, do nothing
 
-
-                        // TODO for keep recording need to set preference in main activity to preserve the location updates
-
                     }
                 })
 
-                .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+                .setNegativeButton(R.string.discard, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         // User cancelled the dialog
 
+                        setRecording(false);
                         stopLocationUpdates();
-                        setRoute(new ArrayList<Location>()); // reset route
+                        clearRoute();
+                        button.setText(R.string.start);
 
 
                     }
@@ -280,11 +329,18 @@ public class MapFragmentRecorder extends MapFragment  {
         dialog.show();
 
 
-
 //        Snackbar.make(getView(), "Saving trip...", Snackbar.LENGTH_LONG).setAction("Action", null).show();
 
 
+    }
 
+    private void clearRoute() {
+        getRoute().clear(); // reset route
+        setLastPosition(null);
+        for (Polyline line : polylines) {
+            line.remove();
+        }
+        polylines.clear();
     }
 
     @Override
@@ -302,14 +358,28 @@ public class MapFragmentRecorder extends MapFragment  {
         mLocationManager.removeUpdates(mLocationListener);
     }
 
+    public LatLng getLastPosition() {
+        return mLastPosition;
+    }
+
+    public void setLastPosition(LatLng mLastPosition) {
+        this.mLastPosition = mLastPosition;
+    }
+
     //    interface callback for main activity to save Locations visited so far
     public interface MapFragInteraction {
 
-        public int saveTrip(ArrayList<Location> route);
+        int saveTrip(ArrayList<Location> route);
 
     }
 
+    public Boolean isRecording() {
+        return recording;
+    }
 
+    public void setRecording(Boolean recording) {
+        this.recording = recording;
+    }
 
 
 }
