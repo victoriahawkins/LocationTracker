@@ -5,7 +5,7 @@
 
 For a full demo click here: (https://youtu.be/eaVJwr1IA68)
 \
-GPS Trace from [Developments off Long Road](http://www.openstreetmap.org/user/Laverock/traces/2572590)
+GPS Trace "[Developments off Long Road](http://www.openstreetmap.org/user/Laverock/traces/2572590)" from [OpenStreetMap](http://www.openstreetmap.org)
 
 Android application that tracks GPS location and displays the path on a map. The path can be saved and viewed on a saved trips view. Another view shows points of interest near the user and displays the photos.
 
